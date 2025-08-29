@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { UploadDropzone } from "@/utils/uploadthing";
 import { X } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";  // Added useCallback and useEffect
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -20,22 +20,40 @@ const CreateBlogPost = () => {
   const router = useRouter();
 
   const [editorValue, setEditorValue] = useState<string>("");
-
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
-
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [image, setImage] = useState<string | null>(null);
-
   const [imageUploading, setImageUploading] = useState<boolean>(false);
-
   const [submitting, setSubmitting] = useState<boolean>(false);
-
   const [title, setTitle] = useState<string>("");
 
-  const handleEditorChange = (value: string) => {
+  // Memoize the handler
+  const handleEditorChange = useCallback((value: string) => {
     setEditorValue(value);
-  };
+  }, []);
 
-  // Callback function to handle the selected tags from the child
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("blogDraft");
+    if (savedDraft) {
+      const { title: savedTitle, description: savedDescription, tags: savedTags, image: savedImage } = JSON.parse(savedDraft);
+      setTitle(savedTitle || "");
+      setEditorValue(savedDescription || "");
+      setSelectedTags(savedTags || []);
+      setImage(savedImage || null);
+    }
+  }, []);
+
+  // Save draft to localStorage whenever state changes
+  useEffect(() => {
+    const draft = {
+      title,
+      description: editorValue,
+      tags: selectedTags,
+      image,
+    };
+    localStorage.setItem("blogDraft", JSON.stringify(draft));
+  }, [title, editorValue, selectedTags, image]);
+
   const handleTagSelection = (tags: string[]) => {
     setSelectedTags(tags);
   };
@@ -54,10 +72,12 @@ const CreateBlogPost = () => {
 
       if (response.status === 201) {
         toast.success("Blog post created successfully");
+        // Clear state and localStorage
         setTitle("");
         setEditorValue("");
         setSelectedTags([]);
         setImage(null);
+        localStorage.removeItem("blogDraft");
         router.push("/");
       }
     } catch (error: any) {

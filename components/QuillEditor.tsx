@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";  // Added useState
 
 interface QuillEditorProps {
   value: string;
@@ -10,6 +10,7 @@ interface QuillEditorProps {
 const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange }) => {
   const quillRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
   const compressImage = async (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -129,11 +130,11 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange }) => {
         },
       });
 
-      editorRef.current.root.innerHTML = value || "";
-
       editorRef.current.on("text-change", () => {
         onChange(editorRef.current.root.innerHTML);
       });
+
+      setIsReady(true);  // Set ready after initialization
     };
 
     initQuill();
@@ -143,13 +144,13 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange }) => {
         editorRef.current.off("text-change");
       }
     };
-  }, []);
+  }, [onChange]);  // Added onChange to dependencies
 
   useEffect(() => {
-    if (editorRef.current && value !== editorRef.current.root.innerHTML) {
+    if (isReady && editorRef.current && value !== editorRef.current.root.innerHTML) {
       editorRef.current.root.innerHTML = value || "";
     }
-  }, [value]);
+  }, [value, isReady]);
 
   return <div ref={quillRef} style={{ height: "400px" }}></div>;
 };
